@@ -1,0 +1,852 @@
+<aura:component implements="force:appHostable"  controller="S_ShowActivitycontroller_Clone_lightning">
+    
+<!--Declare Attributes for Users-->
+    <aura:attribute name="searchKeyword" type="String" description="use for store user search input"/>
+    <aura:attribute name="RecordList" type="List" default="[]" description="Records Picklist Values"/>
+    <aura:attribute name="selectedrecordList" type="List" default="[]" description="Selected Records Picklist Values"/> 
+    <aura:attribute name="selectrecordtype" type="string" />
+    <aura:attribute name="error" type="string" description="used to display error msg"/>
+    <aura:attribute name="Message" type="boolean" default="false" description="use for display no record found message"/>
+  <!--Declare Attributes for Records-->   
+    <aura:attribute name="UsersList" type="List" default="[]" description="Users Picklist Values"/>
+    <aura:attribute name="selectedUsersList" type="List" default="[]" description="Selected Users Picklist Values"/> 
+    <aura:attribute name="TotalNumberOfRecordlead" type="integer"  description="use for display Number of lead records"/>
+    <aura:attribute name="TotalNumberOfRecordcontact" type="integer"  description="use for display Number of contact records"/>
+    <aura:attribute name="TotalNumberOfRecordaccount" type="integer"  description="use for display Number of account records"/>
+    <aura:attribute name="TotalNumberOfRecordopp" type="integer"  description="use for display Number of opp records"/>
+    <aura:attribute name="searchResultlead" type="List" description="use for store and display lead list return from server"/>
+    <aura:attribute name="searchResultcontact" type="List" description="use for store and display contacts list return from server"/>
+    <aura:attribute name="searchResultaccount" type="List" description="use for store and display account list return from server"/>
+    <aura:attribute name="searchResultopp" type="List" description="use for store and display opportunity list return from server"/>
+
+<div class="slds-grid slds-wrap slds-grid_vertical-align-center slds-grid_align-center">
+<div class="slds-col slds-size_10-of-12 slds-large-size_10-of-12">
+     <!-- SHOW LOADING SPINNER--> 
+   	<lightning:spinner variant="brand" size="large" aura:id="Id_spinner" class="slds-hide" />
+    <!-- ERROR MESSAGE IF NOT RECORDS FOUND--> 
+        <aura:if isTrue="{!v.Message}">
+            <div class="slds-notify_container slds-is-relative">
+                <div class="slds-notify slds-notify_toast slds-theme_error" role="alert">
+                    <div class="slds-notify__content">
+                        <h2 class="slds-text-heading_small">No Records Found...</h2>
+                    </div>
+                </div>
+            </div>
+        </aura:if>
+    <div class="demo-only slds-grid" style=" background: rgb(244, 246, 249); padding: 5px;">
+      <div class="slds-panel slds-grid slds-grid_vertical slds-nowrap">
+          <div class="slds-page-header">
+              <div class="slds-media">                
+                <div class="slds-media__body">
+					 <span class="slds-avatar_large">
+						<img src="{!$Resource.SaaSnic_Logo}"/>
+					</span>
+                </div>
+              </div>
+            </div>
+			
+			<div class="slds-grid slds-wrap slds-grid--pull-padded slds-m-around_large">
+				<div class="slds-col--padded slds-size--1-of-1">
+					<div class="slds-text-title_caps slds-text-align--center title">Select Record Or Search Record Though Global Search</div>
+				</div>
+			</div>
+			<div class="slds-form-element slds-avatar--empty slds-m-around_xx-small" >
+               
+			<div class="slds-grid slds-grid--pull-padded slds-m-around_small">
+			  <div class="slds-col--padded slds-col slds-size_12-of-12">
+					<div class="slds-form--inline slds-align-middle">
+                        
+					  <div class="slds-form-element">
+						<label class="slds-form-element__label label" for="">Select Searching Way</label>
+                          <div class="slds-form-element__control" aura:id="aa">
+                              <ui:inputSelect  class="slds-input" change="{!c.visibleToUser}">
+								<ui:inputSelectOption text="None" value="None" />
+								<ui:inputSelectOption text="By Search" value="By_Search" />
+								<ui:inputSelectOption text="Through Picklist" value="Through_Picklist"/>	
+							</ui:inputSelect>
+						</div>
+					  </div>
+					</div>
+			  </div>
+			 </div>
+			</div>
+			<!--<search the records parts start>-->
+			
+               <div class="slds-form-element slds-avatar--empty slds-m-around_xx-small slds-hide " aura:id="Record_Show" aria-describedby="error_01" >
+			<div class="slds-grid slds-grid--pull-padded slds-m-around_small">
+			  <div class="slds-col--padded slds-col slds-size_12-of-12">
+                  <div class="slds-form--inline slds-align-middle">
+					  <div class="slds-form-element">
+					  	<div class="slds-form-element__control">
+                            <label class="slds-form-element__label label" for="">Search The Records</label>
+                      		 <lightning:input type="search"  placeholder="Type Your Search Text" aura:id="searchField" aria-describedby="error_02"
+                                        value="{!v.searchKeyword}" style="display: -webkit-inline-box;" label="Type Your Search Text" />
+                          </div>
+                            <div class="slds-form-element__control slds-m-left_medium">
+                            <lightning:button label="Go" class="slds-button slds-button--brand" variant="brand" 
+                                               onclick="{!c.Search}" />
+                               
+                            </div>
+						</div>
+                        <div id="error_01" aura:id="error" class="slds-form-element__help slds-hide error_msg">This field is required</div>   
+                        <div id="error_02" aura:id="error_min" class="slds-form-element__help slds-hide error_msg ">Query should be of atleast 3 characters.</div>		
+                        		
+					  </div>
+					  </div>
+					</div>
+			<div aura:id="allhidden">                   
+                   <!-- TOTAL RECORDS for lead BADGES--> 
+        <div class="slds-m-around_x-small " aura:id="leadbadge">
+        <lightning:badge label="{!v.TotalNumberOfRecordlead}" />
+        </div>
+        <!-- making  the table of lead-->
+          	<table class="slds-table slds-table_bordered slds-table_cell-buffer slds-hide"  aura:id="leadtable">
+            <thead>
+                <tr class="slds-text-title_caps">
+                    <th scope="col">
+                        <div class="slds-truncate" title="S.no">S.no </div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title=" Name">Lead Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Title">Title</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Email">Email</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Industry">Industry</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Company">Company</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Status">Status</div>
+                    </th>
+                </tr>
+            </thead>
+                <tbody> 
+       
+                <!--### display all records of searchResult attribute by aura:iteration  for leads###-->
+                <aura:iteration items="{!v.searchResultlead}" var="con" indexVar="count">
+                    <tr>
+                        <td>
+                            <div class="slds-truncate">{!count + 1}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Name}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Title}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Email}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Industry}</div>
+                        </td>
+                        
+                        <td>
+                            <div class="slds-truncate">{!con.Company}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Status}</div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+                
+                
+                   </table>                 
+				<!-- TOTAL RECORDS for contact BADGES--> 
+        <div class="slds-m-around_x-small " aura:id="leadbadge">
+        <lightning:badge label="{!v.TotalNumberOfRecordcontact}" />
+        </div>
+                   <!-- making the table for contacts -->
+              <table class="slds-table slds-table_bordered slds-table_cell-buffer "  aura:id="contacttable">
+            <thead>
+                <tr class="slds-text-title_caps">
+                    <th scope="col">
+                        <div class="slds-truncate" title="S.no">S.no</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Contact Name"> Contact Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Title">Title</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Email">Email</div>
+                    </th>
+                     <th scope="col">
+                        <div class="slds-truncate" title="Department"> Department </div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="phone">phone</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="mobilephone">mobilephone</div>
+                    </th>
+                </tr>
+            </thead>
+            <tbody> 
+       
+                <!--### display all records of searchResult attribute by aura:iteration for contacts ###-->
+                <aura:iteration items="{!v.searchResultcontact}" var="con" indexVar="count">
+                    <tr>
+                        <td>
+                            <div class="slds-truncate">{!count + 1}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Name}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Title}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Email}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.Department}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!con.phone}</div>
+                        </td>
+                         <td>
+                            <div class="slds-truncate">{!con.MobilePhone}</div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+                   </table>  
+     <!-- TOTAL RECORDS for Accounts BADGES--> 
+        <div class="slds-m-around_x-small " aura:id="accountbadge">
+        <lightning:badge label="{!v.TotalNumberOfRecordaccount}" />
+        </div>
+    <!-- making the table for account -->
+              <table class="slds-table slds-table_bordered slds-table_cell-buffer "  aura:id="accounttable">
+            <thead>
+                <tr class="slds-text-title_caps">
+                    <th scope="col">
+                        <div class="slds-truncate" title="S.no">S.no</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Account Name"> Account Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Website">Website</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="phone">phone</div>
+                    </th>
+                     <th scope="col">
+                        <div class="slds-truncate" title="industry"> industry </div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="site">site</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="rating">rating</div>
+                    </th>
+                </tr>
+            </thead>
+                 
+        <tbody> 
+       
+                <!--### display all records of searchResult attribute by aura:iteration for contacts ###-->
+                <aura:iteration items="{!v.searchResultaccount}" var="acc" indexVar="count">
+                    <tr>
+                        <td>
+                            <div class="slds-truncate">{!count + 1}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!acc.Name}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!acc.Website}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!acc.site}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!acc.Department}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!acc.phone}</div>
+                        </td>
+                         <td>
+                            <div class="slds-truncate">{!acc.rating}</div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+         </table>
+       <!-- TOTAL RECORDS for oportunity BADGES--> 
+        <div class="slds-m-around_x-small " aura:id="oppbadge">
+        <lightning:badge label="{!v.TotalNumberOfRecordopp}" />
+        </div>
+    <!-- making the table for Opportunity -->
+              <table class="slds-table slds-table_bordered slds-table_cell-buffer "  aura:id="opptable">
+            <thead>
+                <tr class="slds-text-title_caps">
+                    <th scope="col">
+                        <div class="slds-truncate" title="S.no">S.no</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Opportunity Name"> Opportunity Name</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="CloseDate">CloseDate</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="StageName">StageName</div>
+                    </th>
+                     <th scope="col">
+                        <div class="slds-truncate" title="LeadSource"> LeadSource </div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="Amount">Amount</div>
+                    </th>
+                    <th scope="col">
+                        <div class="slds-truncate" title="ExpectedRevenue">ExpectedRevenue</div>
+                    </th>
+                </tr>
+            </thead>
+                 
+        <tbody> 
+       
+                <!--### display all records of searchResult attribute by aura:iteration for contacts ###-->
+                <aura:iteration items="{!v.searchResultopp}" var="opp" indexVar="count">
+                    <tr>
+                        <td>
+                            <div class="slds-truncate">{!count + 1}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!opp.Name}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!opp.CloseDate}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!opp.StageName}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!opp.LeadSource}</div>
+                        </td>
+                        <td>
+                            <div class="slds-truncate">{!opp.Amount}</div>
+                        </td>
+                         <td>
+                            <div class="slds-truncate">{!opp.ExpectedRevenue}</div>
+                        </td>
+                    </tr>
+                </aura:iteration>
+            </tbody>
+         </table>
+               </div>    
+			  </div>
+			<!--search the records parts ends -->
+			<!--select the object part starts-->
+          <div class="slds-form-element slds-avatar--empty slds-m-around_xx-small slds-hide " aura:id="Select_The_Object">
+          <div class="slds-grid slds-grid--pull-padded slds-m-around_small">
+		<div class="slds-col--padded slds-col slds-size_12-of-12">
+			<div class="slds-form--inline slds-align-middle">
+				<div class="slds-form-element">
+					<label class="slds-form-element__label label" for="">Select The Object</label>
+					<div class="slds-form-element__control">
+						 <ui:inputSelect class="slds-input">
+                                <ui:inputSelectOption text="None"/>
+                                <ui:inputSelectOption text="Account"/>
+                                
+                             	<ui:inputSelectOption text="Contact"/>
+                             	<ui:inputSelectOption text="Lead"/>
+                             	<ui:inputSelectOption text="Opprtunity"/>
+                            </ui:inputSelect>
+					</div>
+				 </div>
+				 <!-- here the selected object records should be shown-->
+				 <div class="slds-form-element">
+					<label class="slds-form-element__label label" for="">Name</label>
+					<div class="slds-form-element__control">
+						<div class="slds-select_container">
+						  <select id="" class="slds-select">
+							<option>None</option>
+							<option>By Search</option>
+							<option>Though Picklist</option>
+						  </select>
+						</div>
+					</div>
+				 </div>
+				 
+			</div>
+		</div>
+	</div>
+          </div>
+       		
+             
+              
+          <div class="slds-panel slds-grid slds-grid_vertical slds-nowrap ">
+			  <div class="slds-grid slds-wrap slds-grid--pull-padded slds-m-around_xx-small">
+				  <div class="slds-col--padded slds-size--1-of-1">	
+					 <div class="slds-text-title_caps slds-text-align--left act-title">Activity History</div>
+				  </div>
+					<div class="slds-col--padded slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2">
+						<div class="slds-text-title_caps slds-text-align--center head-title">Select Record</div>
+					
+                   <lightning:dualListbox aura:id="selectRecords" 
+                               name="Records"
+                               label="Select Records"
+                               sourceLabel="Available Records"
+                               selectedLabel="Selected Records"
+                               options="{!v.RecordList }"
+                               value="{!v.selectedrecordList}"
+                           />
+                  
+                  </div>
+				  
+					<div class="slds-col--padded slds-size--1-of-1 slds-medium-size--1-of-2 slds-large-size--1-of-2 ">
+						<div class="slds-text-title_caps slds-text-align--center head-title">Select User</div>
+                      
+                        <lightning:dualListbox aura:id="selectUsers"
+                               name="Users"
+                               label="Select Users"
+                               sourceLabel="Available Users"
+                               selectedLabel="Selected Users"
+                               options="{!v.UsersList }"
+                               value="{!v.selectedUsersList}"
+                         />
+					</div>
+
+				</div>
+			</div>
+			
+			<div class="slds-hide">
+				<c:Select_Date_Filter />
+			</div>
+          	<div class="slds-hide">
+                <c:Activity_History_Details />
+          	</div>
+			
+			
+		</div>
+	</div>
+</div>
+</div>
+</aura:component>
+
+--------------------------------------------------------------------------------------------------------
+
+public class S_ShowActivitycontroller_Clone_lightning {
+   public static list<Lead>searchLeads ;	
+   public static list<Contact>searchContacts;
+   public static list<Account>searchAccounts;
+   public static list<Opportunity>searchOpportunities;
+   public static boolean foundacthisleads;  
+   @AuraEnabled
+   public static List<List<SObject>>  getsearchRecordFunction(String searchKeyWord){
+        system.debug('searchKeyWord----'+searchKeyWord);
+        List<List<SObject>> searchList = [FIND :searchKeyWord IN ALL FIELDS RETURNING  Lead(Name,title,email,company,Industry,ownerid,MobilePhone,status),contact(Name,title,phone,mobilephone,email,accountid,Department,ownerid),account(name,Website,phone,industry,ownerid,site,rating),opportunity(name,CloseDate,Accountid,Amount,ExpectedRevenue
+,StageName,ownerid,LeadSource)];
+        system.debug('-first time-'+searchList);
+        system.debug('-second time-'+searchList[0]);
+        searchLeads = searchList[0];
+        system.debug('-searchLeads-'+searchLeads);
+        searchContacts = searchList[1];
+        searchAccounts = searchList[2];
+        searchOpportunities = searchList[3];
+        system.debug('--'+searchAccounts);
+        return searchList;
+    }
+     @AuraEnabled
+     public static List<lead>  getsearchRecordFunctionLead(String searchKeyWord){
+        system.debug('searchKeyWord----'+searchKeyWord);
+        system.debug('searchListlead---'+searchLeads);
+    	return searchLeads;
+     }
+    
+     @AuraEnabled
+     public static List<contact>  getsearchRecordFunctioncontact(String searchKeyWord){
+         system.debug('searchKeyWord----'+searchKeyWord);
+         system.debug('searchContacts---'+searchContacts);
+    	 return searchContacts;
+     }
+    
+     @AuraEnabled
+     public static List<account>  getsearchRecordFunctionaccount(String searchKeyWord){
+         system.debug('searchKeyWord----'+searchKeyWord);
+         system.debug('searchAccounts---'+searchAccounts);
+    	 return searchAccounts;
+     }
+    @AuraEnabled
+     public static List<Opportunity>  getsearchRecordFunctionopp(String searchKeyWord){
+         system.debug('searchKeyWord----'+searchKeyWord);
+         system.debug('searchOpportunities---'+searchOpportunities);
+    	 return searchOpportunities;
+     }
+    @AuraEnabled
+    public static boolean shistoryforleads(){
+        for(lead l:searchLeads){
+            
+        }
+    return foundacthisleads;    
+    }
+    
+    
+}
+
+
+-------------------------------------------------------------------------------------------------
+
+({
+	visibleToUser : function(component, event, helper) {
+        console.log('component---'+component);
+        console.log('event---'+event);
+        console.log('helper---'+helper);
+        var evntsource = event.getSource();
+        console.log('evntsource---'+evntsource);
+        var picklistValue =evntsource.get("v.value"); 
+        console.log('picklistValue---'+picklistValue);
+      
+        
+        if(picklistValue == 'None'){
+            console.log('none');
+            var Select_The_Object1= component.find("Select_The_Object");
+            console.log("Select_The_Object1----"+Select_The_Object1);
+            console.log("Record_Show1----"+Record_Show1);
+			$A.util.addClass(Select_The_Object1, 'slds-hide'); 
+            console.log('through picklist hidden');
+            var Record_Show1= component.find("Record_Show");
+            $A.util.addClass(Record_Show1, 'slds-hide');
+            console.log('bysearch hidden');
+        }
+        
+        
+        
+        if(picklistValue == 'Through Picklist' ){
+            console.log('Through Picklist');
+            var Select_The_Object1= component.find("Select_The_Object");
+            console.log("Select_The_Object1----"+Select_The_Object1);
+            $A.util.removeClass(Select_The_Object1, 'slds-hide');
+            $A.util.addClass(Select_The_Object1, 'slds-show');
+            console.log('through picklist shown');
+            var Record_Show1= component.find("Record_Show");
+            $A.util.addClass(Record_Show1, 'slds-hide');
+            console.log('bysearch hidden');
+            
+          
+        }
+      
+        
+        if(picklistValue =='By Search' ){
+          console.log('By search');
+             var hideall=component.find("allhidden");
+             $A.util.addClass(hideall,'slds-hide');
+			 console.log('Hidding allhidden asBysearch is just selected.' );
+             var Record_Show1= component.find("Record_Show");
+             $A.util.removeClass(Record_Show1, 'slds-hide');
+             $A.util.addClass(Record_Show1, 'slds-show');
+             console.log('bysearch shown');
+             var Select_The_Object1= component.find("Select_The_Object");
+             console.log("Select_The_Object1----"+Select_The_Object1);
+             $A.util.addClass(Select_The_Object1, 'slds-hide');
+             console.log('through picklist hidden');
+            
+        }
+
+    	},
+    
+    Search : function(component, event, helper) {
+        	var isValidEmail = true; 
+        console.log('buttonclicked');
+       console.log('event---'+event);
+         console.log('helper---'+helper);
+         var evntsource = event.getSource();
+        console.log('evntsource---'+evntsource);
+         var searchField = component.find('searchField');
+         console.log('searchField---'+searchField);
+        var query='';
+         query=searchField.get('v.value');
+      //  console.log('query.length=='+query.length);
+        console.log('query---'+query);
+     
+        if(query===undefined || query=='' || query== null ){
+             component.set("v.Message", false);//hides the helper  error message
+            console.log('its undefned');
+            var leadbadge=component.find("leadbadge");
+            var hideall=component.find("allhidden");
+             $A.util.addClass(hideall,'slds-hide');
+			 console.log('Hidding allhidden as query is exactly equals to hidden' );
+             $A.util.addClass(leadbadge,'slds-hide');// hide the leadbadge when query is undefined
+            var leadtable=component.find("leadtable");
+             $A.util.addClass(leadtable,'slds-hide');//hide the lead tablewhen query is undefined.
+             console.log('its undefined');
+             var searchField1= component.find("searchField");
+             $A.util.addClass(searchField1, 'slds-has-error'); // This will add slds errr class that colors the boundary of field red
+             var error1= component.find("error");
+             $A.util.removeClass(error1, 'slds-hide');
+            $A.util.addClass(error1, 'slds-show');
+            console.log('blankfield error');
+            var error2= component.find("error_min");
+             $A.util.addClass(error2, 'slds-hide');
+            // searchField.set("v.errors", [{message: "Please Enter something."}]);
+            return false;
+        }
+      else if(query.length < 3 && query.length >0){
+            component.set("v.Message", false);//hides the helper  error message
+             var hideall=component.find("allhidden");
+             $A.util.addClass(hideall,'slds-hide');
+			 console.log('Hidding allhidden as query is less than 3chars' );
+             var leadbadge=component.find("leadbadge");
+             $A.util.addClass(leadbadge,'slds-hide'); // hide the leadbadge when query is less than 3 chars
+             console.log('leadbadge hidden query less than 3 chars');
+             var leadtable=component.find("leadtable");
+             $A.util.addClass(leadtable,'slds-hide');//hide the lead tablewhen query is below 3 chars.
+            console.log('searchtext shud be atleast 3 ');
+            console.log('query.length=='+query.length);
+             var searchField1= component.find("searchField");
+             $A.util.addClass(searchField1, 'slds-has-error');
+          	 var error2= component.find("error_min");
+             $A.util.removeClass(error2, 'slds-hide');
+             var error1= component.find("error");
+             $A.util.addClass(error1, 'slds-hide');
+          return false;
+          
+           //  searchField.set("v.errors", [{message: "Query should be of atleast 3 characters."}]);
+            
+       }
+          else if(query.length>2){
+              
+               var leadtable=component.find("leadtable");
+              	 $A.util.removeClass(leadtable,'slds-hide');
+              console.log('leadtable shown');
+               $A.util.addClass(leadtable,'slds-show');//show the lead tablewhen query is legit.
+              var leadbadge=component.find("leadbadge");
+              // $A.util.removeClass(leadbadge,'slds-hide');
+             $A.util.addClass(leadbadge,'slds-show'); // shw the lead badge when the query is legit
+              console.log('leadbadge shown query is legit');
+               var error1= component.find("error");
+               $A.util.addClass(error1, 'slds-hide');
+               var error2= component.find("error_min");
+               $A.util.addClass(error2, 'slds-hide');
+               component.set("v.Message", false);//hides the helper  error message
+               helper.SearchHelper(component, event);
+               helper.SearchHelperlead(component, event);
+               helper.SearchHelpercontact(component, event);
+               helper.SearchHelperopp(component,event);
+               helper.SearchHelperaccount(component,event);
+               //helper.SearchHelperopp(component,event);
+          }
+          
+    }   
+})
+
+------------------------------------------------------------------------------------
+
+({
+    SearchHelper : function(component,event) {
+        
+        console.log('helper called');
+        var spinner=component.find("Id_spinner");
+        console.log('spinner====='+spinner);
+        $A.util.removeClass(spinner, 'slds-hide');
+        console.log('spinner shown');
+        console.log('searckeyword---'+component.get("v.searchKeyword"));
+        var action = component.get("c.getsearchRecordFunction");
+        console.log('apexcontroller called');
+        action.setParams({
+            'searchKeyWord': component.get("v.searchKeyword")
+        });
+        
+		
+        action.setCallback(this,function(response){ 
+             // hide spinner when response coming from server 
+            var spinner=component.find("Id_spinner");
+        	console.log('spinner====='+spinner);
+        	$A.util.addClass(spinner, 'slds-hide');
+            console.log('spinner hidden');
+            var state = response.getState();
+            console.log('state--->'+state);
+            if (state === "SUCCESS") {
+                var storeResponse = response.getReturnValue();
+                //consolelog('storeResponse---'+storeResponse[0]);
+                console.log('storeResponse length'+storeResponse.length);
+            	console.log('storeResponse===='+JSON.stringify(storeResponse));
+                var storeresponseeach = JSON.stringify(storeResponse);
+                console.log('store`responseeach---->'+storeresponseeach);
+                if(storeresponseeach=='[[],[],[],[]]'){
+                    console.log('No records found');
+                    //alert('No records were found');
+                    component.set("v.Message", true);
+                    var hideall=component.find("allhidden");
+                     $A.util.addClass(hideall,'slds-hide');
+					console.log('Hidding allhidden as sosl result is empty' );
+                    
+                }
+                else if(storeresponseeach != '[[],[],[],[]]'){
+                    console.log(' records found in sosl');
+                     var hideall=component.find("allhidden");
+                    
+                    $A.util.removeClass(hideall,'slds-hide');
+                     $A.util.addClass(hideall,'slds-show');
+					console.log('showing allhidden as sosl result is not empty' );
+                    component.set("v.Message", false);
+                    var searchField1= component.find("searchField");
+             		var error1= component.find("error");
+            		$A.util.addClass(error1, 'slds-hide');
+           			var error2= component.find("error_min");
+             		$A.util.addClass(error2, 'slds-hide');
+                    
+                }
+                
+            }
+            
+            else if (state === "INCOMPLETE") {
+            alert('Response is Incompleted');
+            }else if (state === "ERROR") {
+                var errors = response.getError();
+                if (errors) {
+                    if (errors[0] && errors[0].message) {
+                        alert("Error message: " + 
+                        errors[0].message);
+                    }
+                } else {
+                    alert("Unknown error");
+                }
+            }
+        });
+        
+        
+        
+     $A.enqueueAction(action); //this will be required  connecting helper to controller.
+    },
+    
+     SearchHelperlead : function(component,event) {
+         console.log('SearchHelperlead called' );
+         var actionlead = component.get("c.getsearchRecordFunctionLead");
+         console.log('getsearchRecordFunctionLead method called');
+         actionlead.setCallback(this,function(response){  
+               var state = response.getState();
+               console.log('state--->'+state);
+               var storeResponse = response.getReturnValue();
+               console.log('storeResponselead length'+storeResponse.length);
+             // set numberOfRecord attribute value with length of return value from server
+               component.set("v.TotalNumberOfRecordlead", 'Lead(s)'+storeResponse.length);
+               console.log('storeResponselead===='+JSON.stringify(storeResponse));
+               var storeresponseeach = JSON.stringify(storeResponse);
+               if(storeresponseeach=='[]'){
+                   console.log('no leads found  ');
+                   var leadtable=component.find("leadtable");
+                   $A.util.addClass(leadtable,'slds-hide');
+					console.log('Hidding opptable as no contacts are found' );
+               }
+             else {
+                // set searchResult list with return value from server.
+                component.set("v.searchResultlead", storeResponse); 
+                  var leadtable=component.find("leadtable");
+                   $A.util.removeClass(leadtable,'slds-hide');
+                   $A.util.addClass(leadtable,'slds-show');
+					console.log('showing leadtable as no leads are found' );
+             }
+               
+    })
+      $A.enqueueAction(actionlead);
+     },
+    SearchHelpercontact : function(component,event) {
+           console.log('SearchHelpercontact called' );
+           var actioncontact = component.get("c.getsearchRecordFunctioncontact");
+           console.log('getsearchRecordFunctionaccount method called');
+           actioncontact.setCallback(this,function(response){  
+               var state = response.getState();
+               console.log('state--->'+state);
+               var storeResponse = response.getReturnValue();
+               console.log('storeResponsecontact length'+storeResponse.length);
+               // set numberOfRecord attribute value with length of return value from server
+               component.set("v.TotalNumberOfRecordcontact", 'Contact(s)'+storeResponse.length);
+               console.log('storeResponsecontact===='+JSON.stringify(storeResponse));
+               var storeresponseeach = JSON.stringify(storeResponse);
+               if(storeresponseeach=='[]'){
+                   console.log('no contacts found  ');
+                   var contacttable=component.find("contacttable");
+                   $A.util.addClass(contacttable,'slds-hide');
+					console.log('Hidding opptable as no contacts are found' );
+               }
+               else {
+                // set searchResult list with return value from server.
+                component.set("v.searchResultcontact", storeResponse); 
+                    var contacttable=component.find("contacttable");
+                    $A.util.removeClass(contacttable,'slds-hide');
+                   $A.util.addClass(contacttable,'slds-show');
+					console.log('showing contacttable as no contacts are found' );
+
+             }
+    })
+      $A.enqueueAction(actioncontact);
+     },
+    
+    SearchHelperaccount: function(component,event) {
+    	  console.log('SearchHelpercaccount called' );
+           var actionaccount = component.get("c.getsearchRecordFunctionaccount");
+           console.log('getsearchRecordFunctionaccount method called');
+           actionaccount.setCallback(this,function(response){  
+               var state = response.getState();
+               console.log('state--->'+state);
+               var storeResponse = response.getReturnValue();
+                component.set("v.TotalNumberOfRecordaccount", 'Account(s)'+storeResponse.length);
+               console.log('storeResponseaccount length'+storeResponse.length);
+               console.log('storeResponseaccount===='+JSON.stringify(storeResponse));
+               var storeresponseeach = JSON.stringify(storeResponse);
+               if(storeresponseeach=='[]'){
+                   console.log('no accounts found  ');
+                   var accounttable=component.find("accounttable");
+                   $A.util.addClass(accounttable,'slds-hide');
+					console.log('Hidding opptable as no accounts are found' );
+               }
+               else {
+                // set searchResult list with return value from server.
+                component.set("v.searchResultaccount", storeResponse);
+                    var accounttable=component.find("accounttable");
+                   $A.util.removeClass(accounttable,'slds-hide');
+                   $A.util.addClass(accounttable,'slds-show');
+					console.log('showing accountstable as accounts are found' );
+                   
+             }
+           
+    })
+      $A.enqueueAction(actionaccount);
+     },
+   
+    SearchHelperopp: function(component,event) {
+    	  console.log('SearchHelperopp called' );
+           var actionopp = component.get("c.getsearchRecordFunctionopp");
+           console.log('getsearchRecordFunctionaopp method called');
+           actionopp.setCallback(this,function(response){  
+           var state = response.getState();
+               console.log('state--->'+state);
+               var storeResponse = response.getReturnValue();
+               component.set("v.TotalNumberOfRecordopp", 'Opportunity(s)'+storeResponse.length);
+               console.log('storeResponseopp length'+storeResponse.length);
+               console.log('storeResponseopp===='+JSON.stringify(storeResponse));
+               var storeresponseeach = JSON.stringify(storeResponse);
+               if(storeresponseeach=='[]'){
+                   console.log('no opps found  ');
+                   var opptable=component.find("opptable");
+                   $A.util.addClass(opptable,'slds-hide');
+					console.log('Hidding opptable as no opps are found' );
+               }
+               
+               else {
+                // set searchResult list with return value from server.
+                component.set("v.searchResultopp", storeResponse); 
+                    var opptable=component.find("opptable");
+                   $A.util.removeClass(opptable,'slds-hide');
+                   $A.util.addClass(opptable,'slds-show');
+					console.log('showing opptable as  opps are found' );
+             }
+               
+               
+    })
+      $A.enqueueAction(actionopp);
+     }
+    
+})
